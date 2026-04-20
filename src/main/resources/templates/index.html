@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analisador Fundamentalista de Ações</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div class="container">
+    <header>
+        <h1>📊 Analisador Fundamentalista</h1>
+        <p class="subtitle">Análise automatizada de ações da B3 com base em indicadores fundamentalistas</p>
+    </header>
+
+    <main>
+        <form action="/analisar" method="get" class="search-form">
+            <input type="text"
+                   name="ticker"
+                   placeholder="Digite o ticker (ex: PETR4, VALE3, ITUB4, MGLU3)"
+                   required
+                   autofocus
+                   maxlength="10">
+            <button type="submit">Analisar</button>
+        </form>
+
+        <div th:if="${erro}" class="alerta-erro">
+            <p th:text="${erro}"></p>
+        </div>
+
+        <section class="info-box">
+            <h3>Sobre a análise</h3>
+            <p>Este sistema consulta a API da <strong>BRAPI</strong> e avalia 7 indicadores fundamentalistas:</p>
+            <ul>
+                <li><strong>P/L</strong> — Preço sobre Lucro</li>
+                <li><strong>P/VP</strong> — Preço sobre Valor Patrimonial</li>
+                <li><strong>ROE</strong> — Retorno sobre Patrimônio Líquido</li>
+                <li><strong>Dívida/Patrimônio</strong> — Nível de endividamento</li>
+                <li><strong>Liquidez Corrente</strong> — Capacidade de pagar dívidas de curto prazo</li>
+                <li><strong>Margem Líquida</strong> — % da receita que vira lucro</li>
+                <li><strong>Crescimento da Receita</strong> — Evolução do faturamento</li>
+            </ul>
+            <p class="aviso">
+                ⚠️ <strong>Importante:</strong> esta é uma ferramenta educacional. Não constitui recomendação de
+                investimento. Os critérios são heurísticas gerais e não consideram particularidades de cada setor
+                (bancos, por exemplo, têm dinâmica de endividamento diferente de indústrias).
+            </p>
+        </section>
+    </main>
+
+    <footer>
+        <p>Dados fornecidos por <a href="https://brapi.dev" target="_blank" rel="noopener">brapi.dev</a></p>
+    </footer>
+</div>
+</body>
+</html>
