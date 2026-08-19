@@ -99,4 +99,4 @@ da empresa e **consulte um assessor certificado** antes de investir.
 - [ ] Histórico de análises em H2/PostgreSQL
 - [ ] Ajuste de critérios por setor (banco, varejo, indústria, etc.)
 - [ ] Gráficos de evolução de preço com Chart.js
-- [ ] Testes unitários no `AnaliseService`
+- [x] Testes unitários no `AnaliseService`, `BrapiClient` e `AnaliseController`

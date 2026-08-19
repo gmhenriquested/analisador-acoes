@@ -9,7 +9,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 /**
  * Servico principal - busca dados na BRAPI e avalia cada metrica
@@ -27,13 +26,12 @@ public class AnaliseService {
         this.brapiClient = brapiClient;
     }
 
-    public Optional<RelatorioAnalise> analisar(String ticker) {
-        Optional<BrapiResponse.QuoteResult> dadosOpt = brapiClient.buscarCotacao(ticker);
-        if (dadosOpt.isEmpty()) {
-            return Optional.empty();
-        }
-
-        BrapiResponse.QuoteResult d = dadosOpt.get();
+    /**
+     * @throws br.com.analisador.exception.BrapiException se a consulta a BRAPI falhar
+     *         (ticker inexistente, token invalido, limite excedido, indisponibilidade)
+     */
+    public RelatorioAnalise analisar(String ticker) {
+        BrapiResponse.QuoteResult d = brapiClient.buscarCotacao(ticker);
         List<MetricaAvaliada> metricas = new ArrayList<>();
 
         // 1. P/L (Preco / Lucro) - quanto menor, mais barata a acao em relacao ao lucro
@@ -67,7 +65,7 @@ public class AnaliseService {
         String classificacao = classificar(pontuacao);
         String resumo = gerarResumo(metricas, classificacao);
 
-        return Optional.of(new RelatorioAnalise(
+        return new RelatorioAnalise(
                 d.symbol(),
                 d.longName() != null ? d.longName() : d.shortName(),
                 d.regularMarketPrice(),
@@ -77,7 +75,7 @@ public class AnaliseService {
                 pontuacao,
                 classificacao,
                 resumo
-        ));
+        );
     }
 
     // ========= AVALIACOES INDIVIDUAIS =========
