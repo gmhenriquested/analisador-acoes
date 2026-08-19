@@ -3,6 +3,7 @@ package br.com.analisador.model;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import java.util.List;
+import java.util.function.Function;
 
 /**
  * Mapeia a resposta do endpoint /api/quote/{ticker} da BRAPI.
@@ -25,7 +26,17 @@ public record BrapiResponse(List<QuoteResult> results) {
             String logourl,
             DefaultKeyStatistics defaultKeyStatistics,
             FinancialData financialData
-    ) {}
+    ) {
+        /** Le um campo de financialData, devolvendo null quando o modulo nao veio na resposta. */
+        public <T> T financeiro(Function<FinancialData, T> campo) {
+            return financialData == null ? null : campo.apply(financialData);
+        }
+
+        /** Le um campo de defaultKeyStatistics, devolvendo null quando o modulo nao veio na resposta. */
+        public <T> T estatistica(Function<DefaultKeyStatistics, T> campo) {
+            return defaultKeyStatistics == null ? null : campo.apply(defaultKeyStatistics);
+        }
+    }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record DefaultKeyStatistics(

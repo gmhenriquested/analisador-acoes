@@ -1,11 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Analisador Fundamentalista de Ações</title>
-    <link rel="stylesheet" th:href="@{/css/style.css}">
-</head>
+<head th:replace="~{fragments/layout :: head('Analisador Fundamentalista de Ações')}"></head>
 <body>
 <div class="container">
     <header>
@@ -40,11 +35,7 @@
                 <li><strong>Margem Líquida</strong> — % da receita que vira lucro</li>
                 <li><strong>Crescimento da Receita</strong> — Evolução do faturamento</li>
             </ul>
-            <p class="aviso">
-                ⚠️ <strong>Importante:</strong> esta é uma ferramenta educacional. Não constitui recomendação de
-                investimento. Os critérios são heurísticas gerais e não consideram particularidades de cada setor
-                (bancos, por exemplo, têm dinâmica de endividamento diferente de indústrias).
-            </p>
+            <p th:replace="~{fragments/layout :: aviso-educacional('aviso')}"></p>
         </section>
     </main>
 

@@ -2,12 +2,13 @@ package br.com.analisador.service;
 
 import br.com.analisador.client.BrapiClient;
 import br.com.analisador.model.BrapiResponse;
+import br.com.analisador.model.BrapiResponse.DefaultKeyStatistics;
+import br.com.analisador.model.BrapiResponse.FinancialData;
 import br.com.analisador.model.MetricaAvaliada;
 import br.com.analisador.model.MetricaAvaliada.Status;
 import br.com.analisador.model.RelatorioAnalise;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -20,6 +21,54 @@ import java.util.Optional;
  */
 @Service
 public class AnaliseService {
+
+    private static final CriterioMetrica PL = CriterioMetrica
+            .de("P/L", "Preço sobre Lucro não disponível")
+            .quando(pl -> pl < 0, Status.RUIM, "P/L negativo indica que a empresa está dando prejuízo")
+            .quando(pl -> pl < 10, Status.BOM, "P/L abaixo de 10 sugere ação potencialmente barata")
+            .quando(pl -> pl <= 20, Status.NEUTRO, "P/L entre 10 e 20 é considerado justo")
+            .padrao(Status.RUIM, "P/L acima de 20 pode indicar ação cara");
+
+    private static final CriterioMetrica PVP = CriterioMetrica
+            .de("P/VP", "Preço sobre Valor Patrimonial não disponível")
+            .quando(pvp -> pvp < 1, Status.BOM, "Cotada abaixo do valor patrimonial — pode estar descontada")
+            .quando(pvp -> pvp <= 2, Status.NEUTRO, "P/VP entre 1 e 2 é considerado normal")
+            .padrao(Status.RUIM, "P/VP alto pode indicar ação sobrevalorizada");
+
+    private static final CriterioMetrica ROE = CriterioMetrica
+            .de("ROE", "Retorno sobre Patrimônio não disponível")
+            .emPercentual()
+            .quando(roe -> roe > 15, Status.BOM, "ROE acima de 15% indica empresa muito rentável")
+            .quando(roe -> roe >= 10, Status.NEUTRO, "ROE entre 10% e 15% é razoável")
+            .padrao(Status.RUIM, "ROE abaixo de 10% indica baixa rentabilidade");
+
+    // BRAPI retorna o endividamento em percentual (ex: 50.0 = 0.5x)
+    private static final CriterioMetrica DIVIDA_PATRIMONIO = CriterioMetrica
+            .de("Dívida/Patrimônio", "Endividamento não disponível")
+            .comoProporcao("x")
+            .quando(ratio -> ratio < 0.5, Status.BOM, "Endividamento baixo — empresa financeiramente saudável")
+            .quando(ratio -> ratio <= 1.0, Status.NEUTRO, "Endividamento moderado")
+            .padrao(Status.RUIM, "Endividamento alto — risco financeiro elevado");
+
+    private static final CriterioMetrica LIQUIDEZ = CriterioMetrica
+            .de("Liquidez Corrente", "Liquidez não disponível")
+            .quando(lc -> lc > 1.5, Status.BOM, "Empresa tem boa capacidade de pagar obrigações de curto prazo")
+            .quando(lc -> lc >= 1.0, Status.NEUTRO, "Liquidez adequada mas sem folga")
+            .padrao(Status.RUIM, "Liquidez abaixo de 1 — pode ter dificuldade de honrar dívidas");
+
+    private static final CriterioMetrica MARGEM_LIQUIDA = CriterioMetrica
+            .de("Margem Líquida", "Margem líquida não disponível")
+            .emPercentual()
+            .quando(pct -> pct > 15, Status.BOM, "Margem alta — empresa converte bem receita em lucro")
+            .quando(pct -> pct >= 5, Status.NEUTRO, "Margem razoável")
+            .padrao(Status.RUIM, "Margem baixa ou negativa");
+
+    private static final CriterioMetrica CRESCIMENTO_RECEITA = CriterioMetrica
+            .de("Crescimento Receita", "Crescimento não disponível")
+            .emPercentual()
+            .quando(pct -> pct > 10, Status.BOM, "Empresa crescendo fortemente")
+            .quando(pct -> pct >= 0, Status.NEUTRO, "Crescimento modesto")
+            .padrao(Status.RUIM, "Receita em queda");
 
     private final BrapiClient brapiClient;
 
@@ -34,34 +83,15 @@ public class AnaliseService {
         }
 
         BrapiResponse.QuoteResult d = dadosOpt.get();
-        List<MetricaAvaliada> metricas = new ArrayList<>();
-
-        // 1. P/L (Preco / Lucro) - quanto menor, mais barata a acao em relacao ao lucro
-        metricas.add(avaliarPL(d.priceEarnings()));
-
-        // 2. P/VP (Preco / Valor Patrimonial)
-        Double pvp = d.defaultKeyStatistics() != null ? d.defaultKeyStatistics().priceToBook() : null;
-        metricas.add(avaliarPVP(pvp));
-
-        // 3. ROE (Return on Equity) - rentabilidade sobre patrimonio
-        Double roe = d.financialData() != null ? d.financialData().returnOnEquity() : null;
-        metricas.add(avaliarROE(roe));
-
-        // 4. Divida / Patrimonio
-        Double dividaPatrimonio = d.financialData() != null ? d.financialData().debtToEquity() : null;
-        metricas.add(avaliarDividaPatrimonio(dividaPatrimonio));
-
-        // 5. Liquidez Corrente
-        Double liquidez = d.financialData() != null ? d.financialData().currentRatio() : null;
-        metricas.add(avaliarLiquidez(liquidez));
-
-        // 6. Margem Liquida
-        Double margem = d.financialData() != null ? d.financialData().profitMargins() : null;
-        metricas.add(avaliarMargemLiquida(margem));
-
-        // 7. Crescimento da Receita
-        Double crescReceita = d.financialData() != null ? d.financialData().revenueGrowth() : null;
-        metricas.add(avaliarCrescimentoReceita(crescReceita));
+        List<MetricaAvaliada> metricas = List.of(
+                PL.avaliar(d.priceEarnings()),
+                PVP.avaliar(d.estatistica(DefaultKeyStatistics::priceToBook)),
+                ROE.avaliar(d.financeiro(FinancialData::returnOnEquity)),
+                DIVIDA_PATRIMONIO.avaliar(d.financeiro(FinancialData::debtToEquity)),
+                LIQUIDEZ.avaliar(d.financeiro(FinancialData::currentRatio)),
+                MARGEM_LIQUIDA.avaliar(d.financeiro(FinancialData::profitMargins)),
+                CRESCIMENTO_RECEITA.avaliar(d.financeiro(FinancialData::revenueGrowth))
+        );
 
         int pontuacao = calcularPontuacao(metricas);
         String classificacao = classificar(pontuacao);
@@ -78,85 +108,6 @@ public class AnaliseService {
                 classificacao,
                 resumo
         ));
-    }
-
-    // ========= AVALIACOES INDIVIDUAIS =========
-
-    private MetricaAvaliada avaliarPL(Double pl) {
-        if (pl == null) return indisponivel("P/L", "Preço sobre Lucro não disponível");
-        if (pl < 0) return new MetricaAvaliada("P/L", fmt(pl), Status.RUIM,
-                "P/L negativo indica que a empresa está dando prejuízo");
-        if (pl < 10) return new MetricaAvaliada("P/L", fmt(pl), Status.BOM,
-                "P/L abaixo de 10 sugere ação potencialmente barata");
-        if (pl <= 20) return new MetricaAvaliada("P/L", fmt(pl), Status.NEUTRO,
-                "P/L entre 10 e 20 é considerado justo");
-        return new MetricaAvaliada("P/L", fmt(pl), Status.RUIM,
-                "P/L acima de 20 pode indicar ação cara");
-    }
-
-    private MetricaAvaliada avaliarPVP(Double pvp) {
-        if (pvp == null) return indisponivel("P/VP", "Preço sobre Valor Patrimonial não disponível");
-        if (pvp < 1) return new MetricaAvaliada("P/VP", fmt(pvp), Status.BOM,
-                "Cotada abaixo do valor patrimonial — pode estar descontada");
-        if (pvp <= 2) return new MetricaAvaliada("P/VP", fmt(pvp), Status.NEUTRO,
-                "P/VP entre 1 e 2 é considerado normal");
-        return new MetricaAvaliada("P/VP", fmt(pvp), Status.RUIM,
-                "P/VP alto pode indicar ação sobrevalorizada");
-    }
-
-    private MetricaAvaliada avaliarROE(Double roe) {
-        if (roe == null) return indisponivel("ROE", "Retorno sobre Patrimônio não disponível");
-        double roePct = roe * 100;
-        if (roePct > 15) return new MetricaAvaliada("ROE", fmtPct(roePct), Status.BOM,
-                "ROE acima de 15% indica empresa muito rentável");
-        if (roePct >= 10) return new MetricaAvaliada("ROE", fmtPct(roePct), Status.NEUTRO,
-                "ROE entre 10% e 15% é razoável");
-        return new MetricaAvaliada("ROE", fmtPct(roePct), Status.RUIM,
-                "ROE abaixo de 10% indica baixa rentabilidade");
-    }
-
-    private MetricaAvaliada avaliarDividaPatrimonio(Double dp) {
-        if (dp == null) return indisponivel("Dívida/Patrimônio", "Endividamento não disponível");
-        // BRAPI retorna em percentual (ex: 50.0 = 0.5x)
-        double ratio = dp / 100.0;
-        if (ratio < 0.5) return new MetricaAvaliada("Dívida/Patrimônio", fmt(ratio) + "x", Status.BOM,
-                "Endividamento baixo — empresa financeiramente saudável");
-        if (ratio <= 1.0) return new MetricaAvaliada("Dívida/Patrimônio", fmt(ratio) + "x", Status.NEUTRO,
-                "Endividamento moderado");
-        return new MetricaAvaliada("Dívida/Patrimônio", fmt(ratio) + "x", Status.RUIM,
-                "Endividamento alto — risco financeiro elevado");
-    }
-
-    private MetricaAvaliada avaliarLiquidez(Double lc) {
-        if (lc == null) return indisponivel("Liquidez Corrente", "Liquidez não disponível");
-        if (lc > 1.5) return new MetricaAvaliada("Liquidez Corrente", fmt(lc), Status.BOM,
-                "Empresa tem boa capacidade de pagar obrigações de curto prazo");
-        if (lc >= 1.0) return new MetricaAvaliada("Liquidez Corrente", fmt(lc), Status.NEUTRO,
-                "Liquidez adequada mas sem folga");
-        return new MetricaAvaliada("Liquidez Corrente", fmt(lc), Status.RUIM,
-                "Liquidez abaixo de 1 — pode ter dificuldade de honrar dívidas");
-    }
-
-    private MetricaAvaliada avaliarMargemLiquida(Double margem) {
-        if (margem == null) return indisponivel("Margem Líquida", "Margem líquida não disponível");
-        double pct = margem * 100;
-        if (pct > 15) return new MetricaAvaliada("Margem Líquida", fmtPct(pct), Status.BOM,
-                "Margem alta — empresa converte bem receita em lucro");
-        if (pct >= 5) return new MetricaAvaliada("Margem Líquida", fmtPct(pct), Status.NEUTRO,
-                "Margem razoável");
-        return new MetricaAvaliada("Margem Líquida", fmtPct(pct), Status.RUIM,
-                "Margem baixa ou negativa");
-    }
-
-    private MetricaAvaliada avaliarCrescimentoReceita(Double cresc) {
-        if (cresc == null) return indisponivel("Crescimento Receita", "Crescimento não disponível");
-        double pct = cresc * 100;
-        if (pct > 10) return new MetricaAvaliada("Crescimento Receita", fmtPct(pct), Status.BOM,
-                "Empresa crescendo fortemente");
-        if (pct >= 0) return new MetricaAvaliada("Crescimento Receita", fmtPct(pct), Status.NEUTRO,
-                "Crescimento modesto");
-        return new MetricaAvaliada("Crescimento Receita", fmtPct(pct), Status.RUIM,
-                "Receita em queda");
     }
 
     // ========= CONSOLIDACAO =========
@@ -191,19 +142,5 @@ public class AnaliseService {
                         + "Esta é uma análise automatizada educacional — sempre combine com análise qualitativa, "
                         + "do setor e consulte um profissional antes de investir.",
                 classificacao, bons, ruins);
-    }
-
-    // ========= HELPERS =========
-
-    private MetricaAvaliada indisponivel(String nome, String msg) {
-        return new MetricaAvaliada(nome, "-", Status.INDISPONIVEL, msg);
-    }
-
-    private String fmt(double v) {
-        return String.format("%.2f", v);
-    }
-
-    private String fmtPct(double v) {
-        return String.format("%.2f%%", v);
     }
 }
