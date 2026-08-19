@@ -1,9 +1,10 @@
 package br.com.analisador.client;
 
 import br.com.analisador.model.BrapiResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
@@ -12,6 +13,8 @@ import java.util.Optional;
 
 @Component
 public class BrapiClient {
+
+    private static final Logger log = LoggerFactory.getLogger(BrapiClient.class);
 
     private final WebClient webClient;
     private final String token;
@@ -40,10 +43,6 @@ public class BrapiClient {
                         }
                     })
                     .retrieve()
-                    .onStatus(HttpStatusCode::isError, clientResponse ->
-                            clientResponse.bodyToMono(String.class)
-                                    .flatMap(body -> reactor.core.publisher.Mono.error(
-                                            new RuntimeException("Erro BRAPI: " + clientResponse.statusCode() + " - " + body))))
                     .bodyToMono(BrapiResponse.class)
                     .block();
 
@@ -53,6 +52,9 @@ public class BrapiClient {
             return Optional.of(response.results().get(0));
 
         } catch (WebClientResponseException.NotFound e) {
+            return Optional.empty();
+        } catch (WebClientResponseException e) {
+            log.warn("Erro BRAPI ao buscar {}: status {}", ticker, e.getStatusCode());
             return Optional.empty();
         }
     }

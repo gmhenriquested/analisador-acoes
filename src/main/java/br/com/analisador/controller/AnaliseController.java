@@ -8,9 +8,12 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.Optional;
+import java.util.regex.Pattern;
 
 @Controller
 public class AnaliseController {
+
+    private static final Pattern TICKER_PATTERN = Pattern.compile("^[A-Za-z0-9]{1,10}$");
 
     private final AnaliseService analiseService;
 
@@ -30,10 +33,16 @@ public class AnaliseController {
             return "index";
         }
 
-        Optional<RelatorioAnalise> relatorio = analiseService.analisar(ticker.trim());
+        String tickerLimpo = ticker.trim().toUpperCase();
+        if (!TICKER_PATTERN.matcher(tickerLimpo).matches()) {
+            model.addAttribute("erro", "Ticker inválido — use apenas letras e números (ex: PETR4, VALE3)");
+            return "index";
+        }
+
+        Optional<RelatorioAnalise> relatorio = analiseService.analisar(tickerLimpo);
 
         if (relatorio.isEmpty()) {
-            model.addAttribute("erro", "Ticker '" + ticker.toUpperCase() + "' não encontrado ou sem dados");
+            model.addAttribute("erro", "Ticker '" + tickerLimpo + "' não encontrado ou sem dados");
             return "index";
         }
 
