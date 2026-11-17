@@ -1,11 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title th:text="'Análise de ' + ${relatorio.ticker()}">Análise</title>
-    <link rel="stylesheet" th:href="@{/css/style.css}">
-</head>
+<head th:replace="~{fragments/layout :: head('Análise de ' + ${relatorio.ticker()})}"></head>
 <body>
 <div class="container">
     <header class="header-resultado">
@@ -55,12 +50,7 @@
         </section>
 
         <section class="disclaimer">
-            <p>
-                ⚠️ <strong>Disclaimer:</strong> esta análise é puramente educacional e baseada em heurísticas gerais de
-                análise fundamentalista. Não constitui recomendação de compra ou venda. Análise fundamentalista
-                completa requer estudo do setor, da governança, das perspectivas de mercado e muitas outras variáveis
-                não cobertas aqui. Consulte sempre um assessor de investimentos certificado antes de tomar decisões.
-            </p>
+            <p th:replace="~{fragments/layout :: aviso-educacional('')}"></p>
         </section>
     </main>
 </div>
