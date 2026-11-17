@@ -1,102 +1,140 @@
-# Analisador Fundamentalista de Ações
+<div align="center">
 
-Aplicação web em Spring Boot que consulta dados de ações da B3 via API da BRAPI e
-gera um relatório de análise fundamentalista automatizada.
+# 📊 Analisador Fundamentalista de Ações
 
-## Stack
+**Análise automatizada de ações da B3 a partir de 7 indicadores fundamentalistas.**
+**Automated fundamental analysis of Brazilian stocks (B3) based on 7 key indicators.**
 
-- **Java 17**
-- **Spring Boot 3.3**
-- **Spring WebFlux** (WebClient para chamar a BRAPI)
-- **Thymeleaf** (templates)
-- **Maven**
+![Java](https://img.shields.io/badge/Java-17-ED8B00?logo=openjdk&logoColor=white)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.3-6DB33F?logo=springboot&logoColor=white)
+![Thymeleaf](https://img.shields.io/badge/Thymeleaf-005F0F?logo=thymeleaf&logoColor=white)
+![Tests](https://img.shields.io/badge/testes-29%20passando-brightgreen)
+[![CI](https://github.com/gmhenriquested/analisador-acoes/actions/workflows/ci.yml/badge.svg)](https://github.com/gmhenriquested/analisador-acoes/actions/workflows/ci.yml)
 
-## Estrutura
+[Português](#-português) · [English](#-english)
 
-```
-src/main/java/br/com/analisador/
-├── AnalisadorAcoesApplication.java   # Main
-├── client/
-│   └── BrapiClient.java              # Cliente HTTP da BRAPI
-├── config/
-│   └── WebClientConfig.java          # Bean do WebClient
-├── controller/
-│   └── AnaliseController.java        # Rotas / e /analisar
-├── model/
-│   ├── BrapiResponse.java            # DTO da resposta da BRAPI
-│   ├── MetricaAvaliada.java          # Métrica com status (BOM/NEUTRO/RUIM)
-│   └── RelatorioAnalise.java         # Relatório final
-└── service/
-    └── AnaliseService.java           # Lógica de análise
-```
+<img src="docs/resultado.png" alt="Relatório de análise da PETR4" width="720">
 
-## Como rodar
+</div>
 
-### 1. Obter token da BRAPI (opcional)
+---
 
-Para as 4 ações de teste (**PETR4, VALE3, ITUB4, MGLU3**) não precisa de token.
+## 🇧🇷 Português
 
-Para outras ações, registre-se gratuitamente em https://brapi.dev/dashboard
-e defina a variável de ambiente:
+### O que faz
 
-```bash
-export BRAPI_TOKEN=seu_token_aqui
-```
-
-### 2. Rodar a aplicação
-
-```bash
-mvn spring-boot:run
-```
-
-### 3. Acessar
-
-Abra http://localhost:8080 e digite um ticker (ex: `PETR4`).
-
-## Indicadores avaliados
+Você digita um ticker (ex.: `PETR4`), a aplicação busca os dados na API da
+[BRAPI](https://brapi.dev), avalia 7 indicadores e devolve uma nota de 0 a 100 com
+a explicação de cada métrica.
 
 | Indicador | Bom | Neutro | Ruim |
 |-----------|-----|--------|------|
-| P/L (Preço/Lucro) | < 10 | 10–20 | > 20 ou negativo |
-| P/VP | < 1 | 1–2 | > 2 |
-| ROE | > 15% | 10–15% | < 10% |
-| Dívida/Patrimônio | < 0.5x | 0.5–1.0x | > 1.0x |
-| Liquidez Corrente | > 1.5 | 1.0–1.5 | < 1.0 |
-| Margem Líquida | > 15% | 5–15% | < 5% |
-| Crescimento Receita | > 10% | 0–10% | negativo |
+| P/L (Preço/Lucro) | < 10 | 10 a 20 | > 20 ou negativo |
+| P/VP | < 1 | 1 a 2 | > 2 |
+| ROE | > 15% | 10% a 15% | < 10% |
+| Dívida/Patrimônio | < 0,5x | 0,5x a 1,0x | > 1,0x |
+| Liquidez Corrente | > 1,5 | 1,0 a 1,5 | < 1,0 |
+| Margem Líquida | > 15% | 5% a 15% | < 5% |
+| Crescimento da Receita | > 10% | 0% a 10% | negativo |
 
-A pontuação final é calculada como:
-- **BOM**: 2 pontos
-- **NEUTRO**: 1 ponto
-- **RUIM**: 0 pontos
+Cada métrica vale 2 (bom), 1 (neutro) ou 0 (ruim). A nota final é
+`pontos / pontos possíveis × 100`. Métricas sem dado ficam fora da conta.
 
-Escala final: (pontos obtidos / pontos máximos) × 100.
+| Nota | Classificação |
+|------|---------------|
+| 70 a 100 | Potencialmente atrativa |
+| 40 a 69 | Neutra |
+| 0 a 39 | Requer cautela |
 
-Classificação:
-- **70–100**: Potencialmente atrativa
-- **40–69**: Neutra
-- **0–39**: Requer cautela
+### Destaques técnicos
 
-## Avisos importantes
+- **Arquitetura em camadas**: `controller` → `service` → `client`, com DTOs imutáveis (`record`).
+- **Critérios declarativos**: cada indicador é um `CriterioMetrica` com faixas, sem `if` repetido.
+- **Tratamento de erros de verdade**: exceções próprias para ticker inexistente, token inválido,
+  limite de requisições e BRAPI fora do ar, tratadas num `@ControllerAdvice` com mensagem amigável.
+- **Validação de entrada** no formato de ticker da B3 (`PETR4`, `ITUB4F`).
+- **Timeout** configurável no `WebClient`.
+- **29 testes** (JUnit 5, Mockito, AssertJ) com cobertura via JaCoCo, rodando no GitHub Actions.
 
-⚠️ **Isto é uma ferramenta educacional.** Não constitui recomendação de investimento.
+### Como rodar
 
-Os critérios usados são heurísticas fundamentalistas clássicas (inspiradas em Graham,
-Fisher e manuais do mercado brasileiro), mas **não consideram particularidades de cada
-setor**. Por exemplo:
+Pré-requisitos: Java 17 e Maven.
 
-- **Bancos**: naturalmente têm Dívida/Patrimônio altíssimo — isso não é ruim pra eles.
-- **Empresas em crescimento**: podem ter P/L alto por expectativa de lucros futuros.
-- **Commodities**: ciclos de preços influenciam margens drasticamente.
+```bash
+git clone https://github.com/gmhenriquested/analisador-acoes.git
+cd analisador-acoes
+mvn spring-boot:run
+```
 
-Sempre combine análise quantitativa com qualitativa, estude o setor, leia relatórios
-da empresa e **consulte um assessor certificado** antes de investir.
+Abra http://localhost:8080 e digite um ticker. `PETR4`, `VALE3`, `ITUB4` e `MGLU3`
+funcionam sem token. Para outras ações, crie um token grátis em
+[brapi.dev](https://brapi.dev/dashboard):
 
-## Próximos passos sugeridos
+```bash
+export BRAPI_TOKEN=seu_token
+```
 
-- [ ] Cache com Caffeine pra evitar chamar a BRAPI toda hora
-- [ ] Comparação side-by-side de múltiplas ações
-- [ ] Histórico de análises em H2/PostgreSQL
-- [ ] Ajuste de critérios por setor (banco, varejo, indústria, etc.)
-- [ ] Gráficos de evolução de preço com Chart.js
-- [x] Testes unitários no `AnaliseService`, `BrapiClient` e `AnaliseController`
+Testes: `mvn test`
+
+### Estrutura
+
+```
+src/main/java/br/com/analisador/
+├── client/       BrapiClient: chamada HTTP e tradução de erros
+├── config/       WebClient com timeout
+├── controller/   rotas / e /analisar + GlobalExceptionHandler
+├── exception/    exceções de domínio da BRAPI
+├── model/        DTOs (records)
+└── service/      AnaliseService, CriterioMetrica, Formatador
+```
+
+### Próximos passos
+
+- [ ] Cache das consultas (Caffeine)
+- [ ] Comparar várias ações lado a lado
+- [ ] Critérios por setor (bancos, varejo, indústria)
+- [ ] Gráfico de evolução do preço
+- [ ] Deploy público
+
+> ⚠️ Ferramenta educacional. Não é recomendação de investimento. Os critérios não
+> consideram as particularidades de cada setor (bancos, por exemplo, têm endividamento
+> naturalmente alto).
+
+---
+
+## 🇺🇸 English
+
+### What it does
+
+Type a B3 ticker (e.g. `PETR4`). The app fetches market data from the
+[BRAPI](https://brapi.dev) API, scores 7 fundamental indicators (P/E, P/B, ROE,
+Debt/Equity, Current Ratio, Net Margin, Revenue Growth) and returns a 0 to 100 score
+with a short explanation for each metric.
+
+### Technical highlights
+
+- **Layered architecture** (`controller` → `service` → `client`) with immutable `record` DTOs.
+- **Declarative scoring rules**: each indicator is a `CriterioMetrica` with thresholds.
+- **Real error handling**: custom exceptions for unknown ticker, invalid token, rate limit
+  and API downtime, mapped to friendly messages in a `@ControllerAdvice`.
+- **Input validation** against the B3 ticker format.
+- **29 tests** (JUnit 5, Mockito, AssertJ) with JaCoCo coverage, running on GitHub Actions.
+
+### Run it
+
+```bash
+git clone https://github.com/gmhenriquested/analisador-acoes.git
+cd analisador-acoes
+mvn spring-boot:run   # then open http://localhost:8080
+```
+
+`PETR4`, `VALE3`, `ITUB4` and `MGLU3` work without a token. For other tickers set
+`BRAPI_TOKEN` (free at [brapi.dev](https://brapi.dev/dashboard)).
+
+> ⚠️ Educational project. Not investment advice.
+
+<div align="center">
+<img src="docs/home.png" alt="Home screen" width="600">
+
+Feito por / Made by **[Gabriel Henriques](https://github.com/gmhenriquested)**
+</div>

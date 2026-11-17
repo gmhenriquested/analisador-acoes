@@ -2,4 +2,6 @@
 target/
 .DS_Store
 *.class
-*.jar
+*.jar.idea/
+*.iml
+.vscode/
