@@ -6,9 +6,9 @@
 **Automated fundamental analysis of Brazilian stocks (B3) based on 7 key indicators.**
 
 ![Java](https://img.shields.io/badge/Java-17-ED8B00?logo=openjdk&logoColor=white)
-![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.3-6DB33F?logo=springboot&logoColor=white)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5-6DB33F?logo=springboot&logoColor=white)
 ![Thymeleaf](https://img.shields.io/badge/Thymeleaf-005F0F?logo=thymeleaf&logoColor=white)
-![Tests](https://img.shields.io/badge/testes-29%20passando-brightgreen)
+![Tests](https://img.shields.io/badge/testes-32%20passando-brightgreen)
 [![CI](https://github.com/gmhenriquested/analisador-acoes/actions/workflows/ci.yml/badge.svg)](https://github.com/gmhenriquested/analisador-acoes/actions/workflows/ci.yml)
 
 [Português](#-português) · [English](#-english)
@@ -54,7 +54,34 @@ Cada métrica vale 2 (bom), 1 (neutro) ou 0 (ruim). A nota final é
   limite de requisições e BRAPI fora do ar, tratadas num `@ControllerAdvice` com mensagem amigável.
 - **Validação de entrada** no formato de ticker da B3 (`PETR4`, `ITUB4F`).
 - **Timeout** configurável no `WebClient`.
-- **29 testes** (JUnit 5, Mockito, AssertJ) com cobertura via JaCoCo, rodando no GitHub Actions.
+- **32 testes** (JUnit 5, Mockito, AssertJ) com cobertura via JaCoCo, rodando no GitHub Actions.
+
+### API JSON (para agentes de IA)
+
+Além da interface web, a mesma análise está disponível como API JSON, pensada para ser
+consumida por outros programas e por **agentes de IA** (um servidor MCP pode expor esta
+análise como ferramenta de agente):
+
+```bash
+curl http://localhost:8080/api/analise/PETR4
+```
+
+```json
+{
+  "ticker": "PETR4",
+  "nomeEmpresa": "Petróleo Brasileiro S.A. - Petrobras",
+  "precoAtual": 38.5,
+  "pontuacao": 71,
+  "classificacao": "Potencialmente atrativa",
+  "metricas": [
+    { "nome": "P/L", "valor": "4.20", "status": "BOM", "explicacao": "..." }
+  ],
+  "resumo": "..."
+}
+```
+
+Respostas de erro também são JSON: `400` para ticker em formato inválido, `404` para
+ticker inexistente e `502` quando a BRAPI está indisponível.
 
 ### Como rodar
 
@@ -76,6 +103,21 @@ export BRAPI_TOKEN=seu_token
 
 Testes: `mvn test`
 
+### Deploy com Docker
+
+A aplicação tem um `Dockerfile` multi-stage (build com Maven, imagem final só com JRE):
+
+```bash
+docker build -t analisador-acoes .
+docker run -p 8080:8080 analisador-acoes
+# com token para outras ações:
+docker run -p 8080:8080 -e BRAPI_TOKEN=seu_token analisador-acoes
+```
+
+A imagem lê a porta de `server.port` (8080) e aceita `BRAPI_TOKEN` por variável de
+ambiente, o que permite subir em qualquer serviço que rode um container (Render,
+Railway, Fly.io, Cloud Run etc.).
+
 ### Estrutura
 
 ```
@@ -94,6 +136,8 @@ src/main/java/br/com/analisador/
 - [ ] Comparar várias ações lado a lado
 - [ ] Critérios por setor (bancos, varejo, indústria)
 - [ ] Gráfico de evolução do preço
+- [x] API JSON e `Dockerfile` para deploy
+- [ ] Servidor MCP nativo expondo a análise como ferramenta de agente
 - [ ] Deploy público
 
 > ⚠️ Ferramenta educacional. Não é recomendação de investimento. Os critérios não
@@ -130,6 +174,10 @@ mvn spring-boot:run   # then open http://localhost:8080
 
 `PETR4`, `VALE3`, `ITUB4` and `MGLU3` work without a token. For other tickers set
 `BRAPI_TOKEN` (free at [brapi.dev](https://brapi.dev/dashboard)).
+
+The same analysis is available as a JSON API for other programs and AI agents
+(an MCP server can expose it as a tool): `GET /api/analise/PETR4`. A multi-stage
+`Dockerfile` is included for container deploys (`docker build -t analisador-acoes .`).
 
 > ⚠️ Educational project. Not investment advice.
 
