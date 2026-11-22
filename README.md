@@ -136,9 +136,9 @@ docker run -p 8080:8080 analisador-acoes
 docker run -p 8080:8080 -e BRAPI_TOKEN=seu_token analisador-acoes
 ```
 
-A imagem lê a porta de `server.port` (8080) e aceita `BRAPI_TOKEN` por variável de
-ambiente, o que permite subir em qualquer serviço que rode um container (Render,
-Railway, Fly.io, Cloud Run etc.).
+A imagem escuta a porta da variável `PORT` (caindo para 8080 no local) e aceita
+`BRAPI_TOKEN` por variável de ambiente, o que permite subir sem ajustes em qualquer
+serviço que rode um container (Render, Railway, Fly.io, Cloud Run etc.).
 
 ### Estrutura
 
