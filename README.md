@@ -8,7 +8,7 @@
 ![Java](https://img.shields.io/badge/Java-17-ED8B00?logo=openjdk&logoColor=white)
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5-6DB33F?logo=springboot&logoColor=white)
 ![Thymeleaf](https://img.shields.io/badge/Thymeleaf-005F0F?logo=thymeleaf&logoColor=white)
-![Tests](https://img.shields.io/badge/testes-33%20passando-brightgreen)
+![Tests](https://img.shields.io/badge/testes-34%20passando-brightgreen)
 [![CI](https://github.com/gmhenriquested/analisador-acoes/actions/workflows/ci.yml/badge.svg)](https://github.com/gmhenriquested/analisador-acoes/actions/workflows/ci.yml)
 
 [Português](#-português) · [English](#-english)
@@ -54,7 +54,7 @@ Cada métrica vale 2 (bom), 1 (neutro) ou 0 (ruim). A nota final é
   limite de requisições e BRAPI fora do ar, tratadas num `@ControllerAdvice` com mensagem amigável.
 - **Validação de entrada** no formato de ticker da B3 (`PETR4`, `ITUB4F`).
 - **Timeout** configurável no `WebClient`.
-- **33 testes** (JUnit 5, Mockito, AssertJ) com cobertura via JaCoCo, rodando no GitHub Actions.
+- **34 testes** (JUnit 5, Mockito, AssertJ) com cobertura via JaCoCo, rodando no GitHub Actions.
 
 ### API JSON (para agentes de IA)
 
@@ -184,7 +184,7 @@ with a short explanation for each metric.
 - **Real error handling**: custom exceptions for unknown ticker, invalid token, rate limit
   and API downtime, mapped to friendly messages in a `@ControllerAdvice`.
 - **Input validation** against the B3 ticker format.
-- **33 tests** (JUnit 5, Mockito, AssertJ) with JaCoCo coverage, running on GitHub Actions.
+- **34 tests** (JUnit 5, Mockito, AssertJ) with JaCoCo coverage, running on GitHub Actions.
 
 ### Run it
 
