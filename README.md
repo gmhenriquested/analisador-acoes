@@ -8,7 +8,7 @@
 ![Java](https://img.shields.io/badge/Java-17-ED8B00?logo=openjdk&logoColor=white)
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5-6DB33F?logo=springboot&logoColor=white)
 ![Thymeleaf](https://img.shields.io/badge/Thymeleaf-005F0F?logo=thymeleaf&logoColor=white)
-![Tests](https://img.shields.io/badge/testes-32%20passando-brightgreen)
+![Tests](https://img.shields.io/badge/testes-33%20passando-brightgreen)
 [![CI](https://github.com/gmhenriquested/analisador-acoes/actions/workflows/ci.yml/badge.svg)](https://github.com/gmhenriquested/analisador-acoes/actions/workflows/ci.yml)
 
 [Português](#-português) · [English](#-english)
@@ -54,7 +54,7 @@ Cada métrica vale 2 (bom), 1 (neutro) ou 0 (ruim). A nota final é
   limite de requisições e BRAPI fora do ar, tratadas num `@ControllerAdvice` com mensagem amigável.
 - **Validação de entrada** no formato de ticker da B3 (`PETR4`, `ITUB4F`).
 - **Timeout** configurável no `WebClient`.
-- **32 testes** (JUnit 5, Mockito, AssertJ) com cobertura via JaCoCo, rodando no GitHub Actions.
+- **33 testes** (JUnit 5, Mockito, AssertJ) com cobertura via JaCoCo, rodando no GitHub Actions.
 
 ### API JSON (para agentes de IA)
 
@@ -82,6 +82,28 @@ curl http://localhost:8080/api/analise/PETR4
 
 Respostas de erro também são JSON: `400` para ticker em formato inválido, `404` para
 ticker inexistente e `502` quando a BRAPI está indisponível.
+
+### Servidor MCP (ferramenta de agente)
+
+A aplicação também é um **servidor MCP** (Model Context Protocol, via Spring AI). Um
+agente de IA conectado expõe a ferramenta `analisarAcao(ticker)`, que devolve a mesma
+análise fundamentalista. O transporte é SSE sobre Spring MVC, no endpoint `/sse`
+(com a aplicação rodando, por padrão em `http://localhost:8080/sse`).
+
+Exemplo de configuração num cliente MCP (ex.: Claude Desktop), com a app já no ar:
+
+```json
+{
+  "mcpServers": {
+    "analisador-acoes": {
+      "url": "http://localhost:8080/sse"
+    }
+  }
+}
+```
+
+Assim o produto é ao mesmo tempo um app web que uma pessoa usa e uma ferramenta que um
+agente de IA chama.
 
 ### Como rodar
 
@@ -137,7 +159,7 @@ src/main/java/br/com/analisador/
 - [ ] Critérios por setor (bancos, varejo, indústria)
 - [ ] Gráfico de evolução do preço
 - [x] API JSON e `Dockerfile` para deploy
-- [ ] Servidor MCP nativo expondo a análise como ferramenta de agente
+- [x] Servidor MCP nativo expondo a análise como ferramenta de agente
 - [ ] Deploy público
 
 > ⚠️ Ferramenta educacional. Não é recomendação de investimento. Os critérios não
@@ -162,7 +184,7 @@ with a short explanation for each metric.
 - **Real error handling**: custom exceptions for unknown ticker, invalid token, rate limit
   and API downtime, mapped to friendly messages in a `@ControllerAdvice`.
 - **Input validation** against the B3 ticker format.
-- **29 tests** (JUnit 5, Mockito, AssertJ) with JaCoCo coverage, running on GitHub Actions.
+- **33 tests** (JUnit 5, Mockito, AssertJ) with JaCoCo coverage, running on GitHub Actions.
 
 ### Run it
 
@@ -175,9 +197,10 @@ mvn spring-boot:run   # then open http://localhost:8080
 `PETR4`, `VALE3`, `ITUB4` and `MGLU3` work without a token. For other tickers set
 `BRAPI_TOKEN` (free at [brapi.dev](https://brapi.dev/dashboard)).
 
-The same analysis is available as a JSON API for other programs and AI agents
-(an MCP server can expose it as a tool): `GET /api/analise/PETR4`. A multi-stage
-`Dockerfile` is included for container deploys (`docker build -t analisador-acoes .`).
+The same analysis is available as a JSON API (`GET /api/analise/PETR4`) and as an
+**MCP server** (Spring AI, SSE at `/sse`) exposing an `analisarAcao(ticker)` tool for
+AI agents. A multi-stage `Dockerfile` is included for container deploys
+(`docker build -t analisador-acoes .`).
 
 > ⚠️ Educational project. Not investment advice.
 
